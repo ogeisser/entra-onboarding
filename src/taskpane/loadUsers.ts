@@ -3,7 +3,11 @@
  * Used by the Update flow to populate the UpdateUsers table with current data.
  */
 
-const GRAPH_USERS_URL = 'https://graph.microsoft.com/v1.0/users';
+import {
+  GRAPH_USERS_URL,
+  parseGraphErrorResponse,
+  toErrorMessage,
+} from './graphHelpers';
 
 const GRAPH_SELECT_FIELDS = [
   'id',
@@ -83,17 +87,7 @@ export async function loadUserByUpn(
     });
 
     if (!response.ok) {
-      let errorMessage: string;
-      const text = await response.text();
-      try {
-        const errJson = JSON.parse(text) as {
-          error?: { message?: string; code?: string };
-        };
-        errorMessage =
-          (errJson.error?.message ?? text) || `HTTP ${response.status}`;
-      } catch {
-        errorMessage = text || `HTTP ${response.status}`;
-      }
+      const errorMessage = await parseGraphErrorResponse(response);
       return { success: false, error: errorMessage };
     }
 
@@ -128,7 +122,6 @@ export async function loadUserByUpn(
 
     return { success: true, values };
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    return { success: false, error: errorMessage };
+    return { success: false, error: toErrorMessage(err) };
   }
 }

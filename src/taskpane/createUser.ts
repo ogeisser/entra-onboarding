@@ -3,7 +3,12 @@
  * Maps CreateUsers table columns to Graph user properties.
  */
 
-const GRAPH_USERS_URL = 'https://graph.microsoft.com/v1.0/users';
+import {
+  GRAPH_USERS_URL,
+  cell,
+  parseGraphErrorResponse,
+  toErrorMessage,
+} from './graphHelpers';
 
 export interface CreateUserResult {
   objectId: string | null;
@@ -34,11 +39,6 @@ const COL = {
   companyName: 17,
   department: 18,
 } as const;
-
-function cell(row: unknown[], index: number): string {
-  const raw = row[index];
-  return String(raw ?? '').trim();
-}
 
 function generatePassword(): string {
   const length = 16;
@@ -204,8 +204,8 @@ export async function createUser(
         error: 'UPN already exists',
       };
     }
-  } catch {
-    // Check failed; continue with create (may fail with conflict)
+  } catch (err) {
+    console.warn('userExistsByUpn check failed, continuing with create:', toErrorMessage(err));
   }
 
   const password = generatePassword();
@@ -230,17 +230,7 @@ export async function createUser(
       };
     }
 
-    let errorMessage: string;
-    const text = await response.text();
-    try {
-      const errJson = JSON.parse(text) as {
-        error?: { message?: string; code?: string };
-      };
-      errorMessage = (errJson.error?.message ?? text) || `HTTP ${response.status}`;
-    } catch {
-      errorMessage = text || `HTTP ${response.status}`;
-    }
-
+    const errorMessage = await parseGraphErrorResponse(response);
     return {
       objectId: null,
       generatedPassword: null,
@@ -248,13 +238,11 @@ export async function createUser(
       error: errorMessage,
     };
   } catch (err) {
-    const errorMessage =
-      err instanceof Error ? err.message : String(err);
     return {
       objectId: null,
       generatedPassword: null,
       status: 'error',
-      error: errorMessage,
+      error: toErrorMessage(err),
     };
   }
 }

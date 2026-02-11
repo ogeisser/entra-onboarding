@@ -4,7 +4,13 @@
  * Empty columns are sent as null to clear the property.
  */
 
-const GRAPH_USERS_URL = 'https://graph.microsoft.com/v1.0/users';
+import {
+  GRAPH_USERS_URL,
+  cell,
+  cellOrNull,
+  parseGraphErrorResponse,
+  toErrorMessage,
+} from './graphHelpers';
 
 export interface UpdateUserResult {
   status: 'success' | 'error';
@@ -34,17 +40,6 @@ const COL = {
   companyName: 18,
   department: 19,
 } as const;
-
-function cell(row: unknown[], index: number): string {
-  const raw = row[index];
-  return String(raw ?? '').trim();
-}
-
-/** Returns string value or null if empty (for Graph PATCH). */
-function cellOrNull(row: unknown[], index: number): string | null {
-  const v = cell(row, index);
-  return v === '' ? null : v;
-}
 
 interface GraphUpdateBody {
   displayName: string | null;
@@ -133,25 +128,13 @@ export async function updateUser(
       }
     );
 
-    if (response.status === 204 || response.ok) {
+    if (response.ok) {
       return { status: 'success' };
     }
 
-    let errorMessage: string;
-    const text = await response.text();
-    try {
-      const errJson = JSON.parse(text) as {
-        error?: { message?: string; code?: string };
-      };
-      errorMessage =
-        (errJson.error?.message ?? text) || `HTTP ${response.status}`;
-    } catch {
-      errorMessage = text || `HTTP ${response.status}`;
-    }
-
+    const errorMessage = await parseGraphErrorResponse(response);
     return { status: 'error', error: errorMessage };
   } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : String(err);
-    return { status: 'error', error: errorMessage };
+    return { status: 'error', error: toErrorMessage(err) };
   }
 }

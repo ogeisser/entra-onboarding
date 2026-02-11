@@ -38,6 +38,7 @@ export class AccountManager {
   private pca: IPublicClientApplication | undefined = undefined;
   private _dialogApiResult: Promise<string> | null = null;
   private _usingFallbackDialog = false;
+  private readonly _boundSignOut = () => this.signOut();
 
   private setSignOutButtonVisibility(isVisible: boolean): void {
     const signOutButton = document.getElementById(SIGN_OUT_BUTTON_ID);
@@ -70,7 +71,7 @@ export class AccountManager {
       // Add event listener for click event on sign out button.
       const signOutButton = document.getElementById(SIGN_OUT_BUTTON_ID);
       if (signOutButton) {
-        signOutButton.addEventListener("click", () => this.signOut());
+        signOutButton.addEventListener("click", this._boundSignOut);
       }
     } catch (error) {
       console.error("Failed to initialize AccountManager:", error);
@@ -175,23 +176,40 @@ export class AccountManager {
       Office.context.ui.displayDialogAsync(
         createLocalUrl(`dialog.html`), 
         DIALOG_DIMENSIONS, 
-        (result: any) => {
-          result.value.addEventHandler(Office.EventType.DialogEventReceived, (arg: DialogEventArg) => {
+        (result: Office.AsyncResult<Office.Dialog>) => {
+          if (result.status === Office.AsyncResultStatus.Failed) {
+            this._dialogApiResult = null;
+            reject(new Error(`displayDialogAsync failed: ${result.error?.message ?? 'unknown error'}`));
+            return;
+          }
+          const dialog = result.value;
+          dialog.addEventHandler(Office.EventType.DialogEventReceived, (arg: DialogEventArg) => {
             if ((arg as DialogEventError).error === DIALOG_CLOSED_ERROR_CODE) {
               this._dialogApiResult = null;
               reject("Dialog closed");
             }
           });
-          result.value.addEventHandler(Office.EventType.DialogMessageReceived, (arg: DialogEventArg) => {
-            const parsedMessage = JSON.parse((arg as DialogEventMessage).message);
-            result.value.close();
+          dialog.addEventHandler(Office.EventType.DialogMessageReceived, (arg: DialogEventArg) => {
+            let parsedMessage: { accessToken?: string; error?: string };
+            try {
+              parsedMessage = JSON.parse((arg as DialogEventMessage).message);
+            } catch {
+              dialog.close();
+              this._dialogApiResult = null;
+              reject(new Error("Failed to parse dialog message"));
+              return;
+            }
+            dialog.close();
             if (parsedMessage.error) {
               this._dialogApiResult = null;
               reject(parsedMessage.error);
-            } else {
+            } else if (parsedMessage.accessToken) {
               this.setSignOutButtonVisibility(true);
               this._usingFallbackDialog = true;
               resolve(parsedMessage.accessToken);
+            } else {
+              this._dialogApiResult = null;
+              reject(new Error("Dialog message contained no access token"));
             }
           });
         }
@@ -201,15 +219,21 @@ export class AccountManager {
   }
 
   signOutWithDialogApi(): Promise<void> {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       Office.context.ui.displayDialogAsync(
         createLocalUrl(`dialog.html?logout=1`), 
         DIALOG_DIMENSIONS, 
-        (result: any) => {
-          result.value.addEventHandler(Office.EventType.DialogMessageReceived, () => {
+        (result: Office.AsyncResult<Office.Dialog>) => {
+          if (result.status === Office.AsyncResultStatus.Failed) {
+            console.warn("signOutWithDialogApi: displayDialogAsync failed:", result.error?.message);
+            reject(new Error(`displayDialogAsync failed: ${result.error?.message ?? 'unknown error'}`));
+            return;
+          }
+          const dialog = result.value;
+          dialog.addEventHandler(Office.EventType.DialogMessageReceived, () => {
             this.setSignOutButtonVisibility(false);
             this._dialogApiResult = null;
-            result.value.close();
+            dialog.close();
             resolve();
           });
         }
@@ -223,7 +247,7 @@ export class AccountManager {
   cleanup(): void {
     const signOutButton = document.getElementById(SIGN_OUT_BUTTON_ID);
     if (signOutButton) {
-      signOutButton.removeEventListener("click", () => this.signOut());
+      signOutButton.removeEventListener("click", this._boundSignOut);
     }
     this._dialogApiResult = null;
     this._usingFallbackDialog = false;

@@ -96,31 +96,4 @@ export const useAppStyles = makeStyles({
     display: 'block',
     flexShrink: 0,
   },
-  comingSoonCard: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    minHeight: '200px',
-  },
-  comingSoonContent: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    ...shorthands.gap('12px'),
-    ...shorthands.padding('24px'),
-  },
-  comingSoonIcon: {
-    width: '48px',
-    height: '48px',
-    color: tokens.colorNeutralForeground3,
-  },
-  comingSoonTitle: {
-    ...shorthands.margin(0),
-    textAlign: 'center',
-  },
-  comingSoonSubtitle: {
-    ...shorthands.margin(0),
-    color: tokens.colorNeutralForeground2,
-    textAlign: 'center',
-  },
 });
