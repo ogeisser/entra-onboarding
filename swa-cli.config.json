@@ -1,0 +1,17 @@
+{
+  "$schema": "https://aka.ms/azure/static-web-apps-cli/schema",
+  "configurations": {
+    "entra-onboarding": {
+      "appLocation": ".",
+      "outputLocation": "dist",
+      "appBuildCommand": "bun run build",
+      "ssl": true,
+      "sslCert": "/Users/geiss11/.vite-plugin-mkcert/cert.pem",
+      "sslKey": "/Users/geiss11/.vite-plugin-mkcert/dev.pem",
+      "port": 3000,
+      "host": "localhost",
+      "env": "production",
+      "appName": "swa-onboarding-prod"
+    }
+  }
+}

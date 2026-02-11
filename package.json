@@ -1,0 +1,33 @@
+{
+  "name": "entra-onboarding-addin",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "NODE_ENV=development bun --hot scripts/dev-server.ts",
+
+    "sideload": "cp office/manifest.dev.xml ~/Library/Containers/com.microsoft.Excel/Data/Documents/wef/",
+    "unload": "rm ~/Library/Containers/com.microsoft.Excel/Data/Documents/wef/manifest.dev.xml",
+
+    "prebuild": "rm -rf dist",
+    "build": "NODE_ENV=production bun run scripts/build.ts",
+
+    "postbuild": "cp staticwebapp.config.json dist && cp -r public/. dist/",
+
+    "deploy:prod": "bun run build && swa deploy --config swa-cli.config.json"
+  },
+  "dependencies": {
+    "@azure/msal-browser": "^5.1.0",
+    "@fluentui/react-components": "^9.72.11",
+    "@fluentui/react-icons": "^2.0.318",
+    "react": "^19",
+    "react-dom": "^19"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/office-js": "^1.0.570",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "serve-static-bun": "^0.5.3"
+  }
+}
