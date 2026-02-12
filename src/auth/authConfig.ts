@@ -122,15 +122,13 @@ export class AccountManager {
     } catch (silentError) {
       if (silentError instanceof InteractionRequiredAuthError) {
         return this.acquireTokenInteractively(scopes, loginHint);
-      } else {
-        // For running on a localhost server, use the following line of code
-        // to work around CORS errors with localhost.
-        // Comment this code when deploying to production.
+      } else if (silentError instanceof BrowserAuthError) {
+        // NAA broker timed out or other browser auth issue (e.g. timed_out, popup_window_error).
+        // This is expected in Excel Web where NAA may not respond reliably.
+        console.warn(`Silent auth failed (${silentError.errorCode}), falling back to interactive`);
         return this.acquireTokenInteractively(scopes, loginHint);
-
-        // For production uncomment the following code.
-        // throw new Error(`Unable to acquire access token: ${silentError}`);
-        
+      } else {
+        throw new Error(`Unable to acquire access token: ${silentError}`);
       }
     }
   }
@@ -175,7 +173,7 @@ export class AccountManager {
     this._dialogApiResult = new Promise((resolve, reject) => {
       Office.context.ui.displayDialogAsync(
         createLocalUrl(`dialog.html`), 
-        DIALOG_DIMENSIONS, 
+        { height: 60, width: 30 }, 
         (result: Office.AsyncResult<Office.Dialog>) => {
           if (result.status === Office.AsyncResultStatus.Failed) {
             this._dialogApiResult = null;
@@ -222,7 +220,7 @@ export class AccountManager {
     return new Promise((resolve, reject) => {
       Office.context.ui.displayDialogAsync(
         createLocalUrl(`dialog.html?logout=1`), 
-        DIALOG_DIMENSIONS, 
+        { height: 60, width: 30 }, 
         (result: Office.AsyncResult<Office.Dialog>) => {
           if (result.status === Office.AsyncResultStatus.Failed) {
             console.warn("signOutWithDialogApi: displayDialogAsync failed:", result.error?.message);

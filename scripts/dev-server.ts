@@ -5,7 +5,7 @@ import index from "@/index.html";
 import taskpane from "@/taskpane.html";
 import help from "@/help.html";
 import auth from "@/auth.html";
-
+import dialog from "@/dialog.html";
 const publicFiles = serveStatic("public", { stripFromPathname: "/public" });
 
 const mkcertDir = join(process.env.HOME ?? "", ".vite-plugin-mkcert");
@@ -24,7 +24,8 @@ const server = serve({
     "/index.html": index,
     "/taskpane.html": taskpane,
     "/help.html": help,
-    "/auth.html": auth
+    "/auth.html": auth,
+    "/dialog.html": dialog
   },
 
   // Public Files

@@ -1,7 +1,7 @@
 {
   "globalHeaders": {
     "Content-Security-Policy": "frame-ancestors 'self' https://*.office.com https://*.office365.com https://*.officeapps.live.com https://outlook.office.com https://*.sharepoint.com;",
-    "Cross-Origin-Opener-Policy": "same-origin-allow-popups",
+    "Cross-Origin-Opener-Policy": "unsafe-none",
     "X-Content-Type-Options": "nosniff"
   }
 }
