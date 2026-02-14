@@ -61,11 +61,23 @@ function App() {
     user,
     loginInProgress,
     login,
+    loginAdmin,
     logout,
     error: authError,
     clearError,
   } = useAuth();
   const [selectedTab, setSelectedTab] = useState<TabValue>('create');
+  const [loginHint, setLoginHint] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user !== null || !naaAvailable) return;
+    const hasGetAuthContext = typeof (Office as unknown as { auth?: { getAuthContext?: unknown } })?.auth?.getAuthContext === 'function';
+    if (!hasGetAuthContext) return;
+    Office.auth.getAuthContext().then((ctx) => {
+      const hint = ctx.userPrincipalName ?? ctx.loginHint ?? null;
+      setLoginHint(hint || null);
+    }).catch(() => setLoginHint(null));
+  }, [user, naaAvailable]);
 
   const logDebugInfo = useCallback(async () => {
     try {
@@ -153,7 +165,7 @@ function App() {
               description={
                 <Body1>
                   {naaAvailable
-                    ? 'Sign in using your Excel account.'
+                    ? <>Sign in using your Office account.{loginHint ? <><br /><br /><strong>{loginHint}</strong></> : null}</>
                     : !isNaaSupported
                       ? 'Office too old. Please use a supported Office version.'
                       : 'Nested App Authentication could not be initialized. Sign-in is disabled.' + (naaInitError?.message ? ` (${naaInitError.message})` : '')}
@@ -168,6 +180,23 @@ function App() {
                   disabled={!naaAvailable || loginInProgress}
                 >
                   {loginInProgress ? 'Signing in…' : 'Sign in'}
+                </Button>
+              }
+            />
+          </Card>
+          <Card>
+            <CardHeader
+              header={<Title3>Admin Sign In</Title3>}
+              description={<Body1>Sign in using your Admin account.</Body1>}
+            />
+            <CardFooter
+              action={
+                <Button
+                  appearance="primary"
+                  onClick={loginAdmin}
+                  disabled={!naaAvailable || loginInProgress}
+                >
+                  {loginInProgress ? 'Signing in…' : 'Sign In'}
                 </Button>
               }
             />

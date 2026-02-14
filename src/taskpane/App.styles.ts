@@ -25,6 +25,7 @@ export const useAppStyles = makeStyles({
     flex: 1,
     display: 'flex',
     flexDirection: 'column',
+    ...shorthands.gap('20px'),
     ...shorthands.padding('8px', 0, 0, 0),
   },
   panel: {

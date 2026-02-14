@@ -27,6 +27,8 @@ export interface AuthContextValue {
   loginInProgress: boolean;
   /** Perform SSO login (get token + fetch /me, set user on success) */
   login: () => Promise<void>;
+  /** Perform interactive login with account selection (popup, prompt: select_account) */
+  loginAdmin: () => Promise<void>;
   /** Clear user and error (return to login view) */
   logout: () => void;
   /** Get an access token for the given scopes. Defaults to ['User.ReadWrite.All'] */
@@ -143,6 +145,38 @@ export function AuthProvider({ children, accountManager }: AuthProviderProps) {
     }
   }, [clearError, getAccessToken]);
 
+  const loginAdmin = useCallback(async () => {
+    clearError();
+    setLoginInProgress(true);
+    console.log('Auth: admin login started');
+    try {
+      const token = await accountManager.acquireTokenWithAccountSelection(['User.ReadWrite.All']);
+      const response = await fetch('https://graph.microsoft.com/v1.0/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        const e = new Error(text || `Graph error ${response.status}`);
+        setError(e);
+        throw e;
+      }
+      const data = (await response.json()) as {
+        displayName?: string;
+        userPrincipalName?: string;
+      };
+      setUser({
+        displayName: data.displayName ?? '',
+        userPrincipalName: data.userPrincipalName ?? '',
+      });
+      console.log('Auth: admin login success');
+    } catch (err) {
+      console.error('Auth: admin login failed', err);
+      setError(err instanceof Error ? err : new Error(String(err)));
+    } finally {
+      setLoginInProgress(false);
+    }
+  }, [clearError, accountManager]);
+
   const logout = useCallback(() => {
     setUser(null);
     clearError();
@@ -156,12 +190,13 @@ export function AuthProvider({ children, accountManager }: AuthProviderProps) {
       user,
       loginInProgress,
       login,
+      loginAdmin,
       logout,
       getAccessToken,
       error,
       clearError,
     }),
-    [naaSupported, naaAvailable, naaInitError, user, loginInProgress, login, logout, getAccessToken, error, clearError]
+    [naaSupported, naaAvailable, naaInitError, user, loginInProgress, login, loginAdmin, logout, getAccessToken, error, clearError]
   );
 
   return (

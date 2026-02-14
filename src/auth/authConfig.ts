@@ -133,6 +133,15 @@ export class AccountManager {
     }
   }
 
+  /**
+   * Acquires an access token via the Office Dialog API with account selection (prompt: "select_account").
+   * NAA does not support the prompt parameter, so we bypass it and use a standard PublicClientApplication
+   * inside an Office dialog window where the account picker works correctly.
+   */
+  async acquireTokenWithAccountSelection(_scopes: string[]): Promise<string> {
+    return this.getTokenWithDialogApi('admin=1');
+  }
+
   private async acquireTokenInteractively(scopes: string[], loginHint: string | undefined): Promise<string> {
     try {
       console.log("Trying to acquire token interactively...");
@@ -167,12 +176,16 @@ export class AccountManager {
 
   /**
    * Gets an access token by using the Office dialog API to handle authentication. Used for fallback scenario.
+   * @param queryString Optional query string to append to the dialog URL (e.g. 'admin=1').
    * @returns The access token.
    */
-  async getTokenWithDialogApi(): Promise<string> {
+  async getTokenWithDialogApi(queryString?: string): Promise<string> {
+    const dialogUrl = queryString
+      ? createLocalUrl(`dialog.html?${queryString}`)
+      : createLocalUrl(`dialog.html`);
     this._dialogApiResult = new Promise((resolve, reject) => {
       Office.context.ui.displayDialogAsync(
-        createLocalUrl(`dialog.html`), 
+        dialogUrl, 
         { height: 60, width: 30 }, 
         (result: Office.AsyncResult<Office.Dialog>) => {
           if (result.status === Office.AsyncResultStatus.Failed) {
